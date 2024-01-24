@@ -23,10 +23,24 @@ def load_torch_embeddings(directory):
             embeddings[base_filename] = embedding
     return embeddings
 
-def load_scores(path):
-    df = pd.read_csv(path)
-    df['filename'] = df['image'].apply(lambda x: os.path.basename(x).split('.')[0])
-    median_scores = df.groupby('filename')['label'].median()
+def test_embedding(path):
+    embedding = torch.load(path)['wplus'].numpy()
+    return embedding
+    
+def load_scores(directory):
+    all_dfs = []
+
+    for filename in os.listdir(directory):
+        if filename.endswith(".csv"):
+            file_path = os.path.join(directory, filename)
+            df = pd.read_csv(file_path)
+            df['filename'] = df['image'].apply(lambda x: os.path.basename(x).split('.')[0])
+            all_dfs.append(df)
+
+    total_df = pd.concat(all_dfs)
+
+    median_scores = total_df.groupby('filename')['label'].median()
+
     return median_scores.to_dict()
 
 def filter_embeddings_and_scores(embeddings, scores):
@@ -109,10 +123,11 @@ def save_image(img, filename):
     cv2.imwrite(filename, cv2.cvtColor(tmp, cv2.COLOR_RGB2BGR))
 
 def main():
+    np.random.seed(0)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     embeddings = load_torch_embeddings('./inversions')
-    scores = load_scores('./scores/public_generic_all11_1.csv')
+    scores = load_scores('./scores')
 
     embeddings, scores = filter_embeddings_and_scores(embeddings, scores)
 
@@ -120,12 +135,15 @@ def main():
 
     reference_embeddings = select_high_scoring_embeddings(embeddings, scores, top_n=10)
     embedding_shape = list(embeddings.values())[0].shape
+
     input_embedding = np.random.rand(*embedding_shape)
+    #input_embedding = test_embedding("inversions/ILip77SbmOE_inversion.pt")
 
     optimised_embedding, optimised_score = optimise_embedding_for_attractiveness(input_embedding, reference_embeddings, scores)
     generated_image = generate_image_from_embedding(pspex, optimised_embedding, device)
 
     save_image(generated_image[0].cpu(), 'optimised_attractive_image.jpg')
+    print(optimised_score)
 
 if __name__ == "__main__":
    main()
