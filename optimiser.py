@@ -88,7 +88,7 @@ def train_random_forest_model(reference_embeddings, reference_scores):
     model.fit(X, y)
     return model
 
-def optimise_embedding_for_attractiveness(input_embedding, model, max_iterations=50):
+def optimise_embedding_for_attractiveness(input_embedding, model, max_iterations=100):
     optimization_bounds = [(-1, 1)] * np.prod(input_embedding.shape)
 
     def objective_function(embedding):
@@ -97,7 +97,17 @@ def optimise_embedding_for_attractiveness(input_embedding, model, max_iterations
         print(f"Current embedding summary: Mean={np.mean(synthetic_embedding)}, Std={np.std(synthetic_embedding)}, Score={score}")
         return -score
 
-    result = minimize(objective_function, input_embedding.flatten(), bounds=optimization_bounds, method='L-BFGS-B', options={'maxiter': max_iterations, 'disp': True})
+    result = minimize(
+        objective_function, 
+        input_embedding.flatten(), 
+        bounds=optimization_bounds, 
+        method='L-BFGS-B', 
+        options={'maxiter': max_iterations, 
+                 'disp': True,
+                 'eps': 1e-1
+                 }
+        )
+    
     optimised_embedding = result.x.reshape(input_embedding.shape)
     optimised_score = -objective_function(optimised_embedding.flatten())
 
