@@ -93,8 +93,8 @@ def optimise_embedding_for_attractiveness(input_embedding, model, max_iterations
 
     def objective_function(embedding):
         synthetic_embedding = embedding.reshape(input_embedding.shape)
-        score = model.predict(synthetic_embedding.reshape(1, -1))
-        print(f"Current embedding summary: Mean={np.mean(synthetic_embedding)}, Std={np.std(synthetic_embedding)}")
+        score = model.predict(synthetic_embedding.reshape(1, -1))[0]
+        print(f"Current embedding summary: Mean={np.mean(synthetic_embedding)}, Std={np.std(synthetic_embedding)}, Score={score}")
         return -score
 
     result = minimize(objective_function, input_embedding.flatten(), bounds=optimization_bounds, method='L-BFGS-B', options={'maxiter': max_iterations, 'disp': True})
